@@ -47,6 +47,18 @@ data:
         }
       }
 
+      # OpenBao PKI (Vault-compatible): SPIRE mints an intermediate via sign-intermediate.
+      # Policy: update on "pki_int/root/sign-intermediate". PKI max_lease_ttl >= SPIRE ca_ttl.
+      # Auth: token_auth {} + VAULT_TOKEN from Secret spire-openbao-token (see openbao-spire-token-secret.yaml).
+      UpstreamAuthority "vault" {
+        plugin_data {
+          vault_addr = "http://openbao.default.svc.cluster.local:8200"
+          pki_mount_point = "pki_int"
+          insecure_skip_verify = true
+          token_auth {}
+        }
+      }
+
       Notifier "k8sbundle" {
         plugin_data {
         }

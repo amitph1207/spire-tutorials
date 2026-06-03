@@ -26,6 +26,12 @@ spec:
           args:
             - -config
             - /run/spire/config/server.conf
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: spire-openbao-token
+                  key: token
           ports:
             - containerPort: 8081
           volumeMounts:

@@ -1,0 +1,81 @@
+# Two workloads that share the host agent socket (same pattern as client-deployment).
+# Image is ghcr.io/spiffe/spire-agent (BusyBox has no /opt/spire/bin/spire-agent).
+#
+# 1) ./register-workload-svid-demo.sh
+# 2) kubectl apply -f workload-svid-demo.yaml
+# 3) Validate (examples):
+#    X509:  kubectl exec busybox-1 -- /opt/spire/bin/spire-agent api fetch -socketPath /run/spire/sockets/agent.sock
+#           openssl x509 -in /tmp/svid.0.pem -noout -issuer -subject -dates
+#           openssl verify -CAfile /tmp/bundle.0.pem /tmp/svid.0.pem
+#    JWT:   kubectl exec busybox-2 -- /opt/spire/bin/spire-agent api fetch jwt -socketPath /run/spire/sockets/agent.sock -audience spiffe://example.org
+#           (decode middle segment of JWT: base64 URL; openssl does not verify JWT signatures out of the box)
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svid-x509
+  namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svid-jwt
+  namespace: default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-1
+  namespace: default
+spec:
+  serviceAccountName: svid-x509
+  hostPID: true
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  containers:
+    - name: workload
+      image: ghcr.io/spiffe/spire-agent:1.11.2
+      command: ["sleep", "infinity"]
+      workingDir: /tmp
+      volumeMounts:
+        - name: spire-agent-socket
+          mountPath: /run/spire/sockets
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: spire-agent-socket
+      hostPath:
+        path: /run/spire/sockets
+        type: Directory
+    - name: tmp
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-2
+  namespace: default
+spec:
+  serviceAccountName: svid-jwt
+  hostPID: true
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  containers:
+    - name: workload
+      image: ghcr.io/spiffe/spire-agent:1.11.2
+      command: ["sleep", "infinity"]
+      workingDir: /tmp
+      volumeMounts:
+        - name: spire-agent-socket
+          mountPath: /run/spire/sockets
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: spire-agent-socket
+      hostPath:
+        path: /run/spire/sockets
+        type: Directory
+    - name: tmp
+      emptyDir: {}
