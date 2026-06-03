@@ -57,6 +57,7 @@ apply_server_config() {
 	kubectl apply -f ${DIR}/server-account.yaml > /dev/null
 	kubectl apply -f ${DIR}/server-cluster-role.yaml > /dev/null
 	kubectl apply -f ${DIR}/server-configmap.yaml > /dev/null
+	kubectl apply -f ${DIR}/oidc-dp-configmap.yaml > /dev/null
 	kubectl apply -f ${DIR}/spire-bundle-configmap.yaml > /dev/null
 	kubectl apply -f ${DIR}/server-statefulset.yaml > /dev/null
 	kubectl apply -f ${DIR}/server-service.yaml > /dev/null

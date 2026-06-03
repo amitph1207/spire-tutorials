@@ -12,6 +12,7 @@ resources:
 - server-account.yaml
 - server-cluster-role.yaml
 - server-configmap.yaml
+- oidc-dp-configmap.yaml
 - server-service.yaml
 - server-statefulset.yaml
 - spire-bundle-configmap.yaml

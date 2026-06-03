@@ -1,0 +1,21 @@
+# OIDC Discovery Provider for in-cluster OpenBao JWT auth (no public DNS / ACME).
+# Serves /.well-known/openid-configuration and /keys on port 8080.
+# jwt_issuer must match server.conf jwt_issuer and OpenBao bound_issuer.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-discovery-provider
+  namespace: spire
+data:
+  oidc-discovery-provider.conf: |
+    log_level = "DEBUG"
+    domains = ["spire-server.spire.svc.cluster.local"]
+    jwt_issuer = "http://spire-server.spire.svc.cluster.local:8080"
+    allow_insecure_scheme = true
+    insecure_addr = ":8080"
+    server_api {
+      address = "unix:///tmp/spire-server/private/api.sock"
+    }
+    health_checks {
+      bind_port = "8009"
+    }

@@ -15,6 +15,10 @@ data:
       #AWS requires the use of RSA.  EC cryptography is not supported
       ca_key_type = "rsa-2048"
 
+      # Sets iss claim in JWT-SVIDs. Must match oidc-discovery-provider jwt_issuer
+      # and OpenBao auth/jwt bound_issuer (does NOT serve OIDC by itself).
+      jwt_issuer = "http://spire-server.spire.svc.cluster.local:8080"
+
       ca_subject = {
         country = ["US"],
         organization = ["SPIFFE"],
@@ -68,7 +72,7 @@ data:
     health_checks {
       listener_enabled = true
       bind_address = "0.0.0.0"
-      bind_port = "8080"
+      bind_port = "8008"
       live_path = "/live"
       ready_path = "/ready"
     }

@@ -34,6 +34,9 @@ spec:
                   key: token
           ports:
             - containerPort: 8081
+              name: grpc
+            - containerPort: 8008
+              name: health
           volumeMounts:
             - name: spire-config
               mountPath: /run/spire/config
@@ -41,10 +44,13 @@ spec:
             - name: spire-data
               mountPath: /run/spire/data
               readOnly: false
+            - name: spire-server-socket
+              mountPath: /tmp/spire-server/private
+              readOnly: false
           livenessProbe:
             httpGet:
               path: /live
-              port: 8080
+              port: 8008
             failureThreshold: 2
             initialDelaySeconds: 15
             periodSeconds: 60
@@ -52,13 +58,41 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8080
+              port: 8008
             initialDelaySeconds: 5
             periodSeconds: 5
+        - name: spire-oidc
+          image: ghcr.io/spiffe/oidc-discovery-provider:1.11.2
+          args:
+            - -config
+            - /run/spire/oidc/config/oidc-discovery-provider.conf
+          ports:
+            - containerPort: 8080
+              name: oidc
+          volumeMounts:
+            - name: spire-server-socket
+              mountPath: /tmp/spire-server/private
+              readOnly: true
+            - name: spire-oidc-config
+              mountPath: /run/spire/oidc/config/
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8009
+            failureThreshold: 5
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
       volumes:
         - name: spire-config
           configMap:
             name: spire-server
+        - name: spire-server-socket
+          emptyDir: {}
+        - name: spire-oidc-config
+          configMap:
+            name: oidc-discovery-provider
   volumeClaimTemplates:
     - metadata:
         name: spire-data
