@@ -51,15 +51,14 @@ data:
         }
       }
 
-      # OpenBao PKI (Vault-compatible): SPIRE mints an intermediate via sign-intermediate.
-      # Policy: update on "pki_int/root/sign-intermediate". PKI max_lease_ttl >= SPIRE ca_ttl.
-      # Auth: token_auth {} + VAULT_TOKEN from Secret spire-openbao-token (see openbao-spire-token-secret.yaml).
-      UpstreamAuthority "vault" {
+      # cert-manager: SPIRE creates CertificateRequests; issuer signs intermediate via OpenBao (EAB/ACME).
+      # Requires ClusterIssuer (e.g. openbao-acme) and spire-server RBAC on certificaterequests in spire.
+      UpstreamAuthority "cert-manager" {
         plugin_data {
-          vault_addr = "http://openbao.default.svc.cluster.local:8200"
-          pki_mount_point = "pki_int"
-          insecure_skip_verify = true
-          token_auth {}
+          issuer_name = "openbao-acme"
+          issuer_kind = "ClusterIssuer"
+          issuer_group = "cert-manager.io"
+          namespace = "spire"
         }
       }
 
