@@ -51,14 +51,16 @@ data:
         }
       }
 
-      # Remote OpenBao via bao-agent AppRole proxy on 127.0.0.1:8200 (token auto-renewed; no VAULT_TOKEN).
-      # See spire-bao-agent-configmap.yaml + spire-bao-approle-secret.yaml.
+      # localhost bao-agent: AppRole login + auto token renew; agent injects live token per request.
+      # SPIRE requires a non-empty token at init — "unused" is overridden by api_proxy (force).
       UpstreamAuthority "vault" {
         plugin_data {
           vault_addr = "http://127.0.0.1:8200"
           pki_mount_point = "pki_int"
           insecure_skip_verify = true
-          token_auth {}
+          token_auth {
+            token = "unused"
+          }
         }
       }
 

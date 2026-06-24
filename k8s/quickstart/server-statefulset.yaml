@@ -34,12 +34,18 @@ spec:
             - name: spire-bao-approle
               mountPath: /etc/bao/approle
               readOnly: true
+        - name: wait-for-bao-proxy
+          image: cgr.dev/chainguard/wait-for-it
+          args: ["-t", "90", "127.0.0.1:8200"]
       containers:
         - name: spire-server
           image: ghcr.io/spiffe/spire-server:1.11.2
           args:
             - -config
             - /run/spire/config/server.conf
+          env:
+            - name: VAULT_TOKEN
+              value: "unused"
           ports:
             - containerPort: 8081
               name: grpc

@@ -1,7 +1,9 @@
-# bao-agent for spire-server: AppRole → remote OpenBao; api_proxy on 127.0.0.1:8200.
-# SPIRE UpstreamAuthority "vault" uses vault_addr=http://127.0.0.1:8200 (agent injects renewed token).
+# bao-agent in spire-server pod:
+#   AppRole (role-id + secret-id) → login → short-lived OpenBao token (auto-renewed ~every 30m)
+#   api_proxy on 127.0.0.1:8200 injects the current token on every request (use_auto_auth_token=force)
 #
-# Set vault.address to your remote OpenBao URL (reachable from the spire-server pod).
+# SPIRE vault plugin cannot read a token file; it sends a placeholder token to localhost and the
+# agent replaces it with the live renewed session token.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,7 +15,7 @@ data:
     pid_file = "/tmp/bao-agent.pid"
 
     vault {
-      address = "https://openbao.example.com:8200"
+      address = "http://openbao.default.svc.cluster.local:8200"
     }
 
     auto_auth {

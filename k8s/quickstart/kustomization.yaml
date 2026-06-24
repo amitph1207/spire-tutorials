@@ -5,15 +5,16 @@ namespace: spire
 
 resources:
 - spire-namespace.yaml
+- server-account.yaml
+- server-cluster-role.yaml
+- spire-bao-approle-secret.yaml
+- spire-bao-agent-configmap.yaml
+- server-configmap.yaml
+- oidc-dp-configmap.yaml
+- spire-bundle-configmap.yaml
+- server-statefulset.yaml
+- server-service.yaml
 - agent-account.yaml
 - agent-cluster-role.yaml
 - agent-configmap.yaml
 - agent-daemonset.yaml
-- server-account.yaml
-- server-cluster-role.yaml
-- server-configmap.yaml
-- oidc-dp-configmap.yaml
-- server-service.yaml
-- server-statefulset.yaml
-- spire-bundle-configmap.yaml
-
