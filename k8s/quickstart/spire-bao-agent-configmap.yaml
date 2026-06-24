@@ -1,0 +1,41 @@
+# bao-agent for spire-server: AppRole → remote OpenBao; api_proxy on 127.0.0.1:8200.
+# SPIRE UpstreamAuthority "vault" uses vault_addr=http://127.0.0.1:8200 (agent injects renewed token).
+#
+# Set vault.address to your remote OpenBao URL (reachable from the spire-server pod).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spire-bao-agent-config
+  namespace: spire
+data:
+  agent.hcl: |
+    exit_after_auth = false
+    pid_file = "/tmp/bao-agent.pid"
+
+    vault {
+      address = "https://openbao.example.com:8200"
+    }
+
+    auto_auth {
+      method "approle" {
+        mount_path = "auth/approle"
+        config = {
+          role_id_file_path   = "/etc/bao/approle/role-id"
+          secret_id_file_path = "/etc/bao/approle/secret-id"
+        }
+      }
+      sink "file" {
+        config = {
+          path = "/tmp/bao-agent-token"
+        }
+      }
+    }
+
+    listener "tcp" {
+      address     = "127.0.0.1:8200"
+      tls_disable = true
+    }
+
+    api_proxy {
+      use_auto_auth_token = "force"
+    }

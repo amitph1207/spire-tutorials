@@ -24,31 +24,6 @@ roleRef:
   kind: Role
   name: spire-server-configmap-role
 ---
-# Role for UpstreamAuthority "cert-manager" (CertificateRequest in spire namespace)
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: spire-server-cert-manager-role
-  namespace: spire
-rules:
-- apiGroups: ["cert-manager.io"]
-  resources: ["certificaterequests"]
-  verbs: ["create", "get", "list", "watch", "patch"]
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: spire-server-cert-manager-binding
-  namespace: spire
-subjects:
-- kind: ServiceAccount
-  name: spire-server
-  namespace: spire
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: spire-server-cert-manager-role
----
 # ClusterRole to allow spire-server node attestor to read pods and nodes, and query Token Review API
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
