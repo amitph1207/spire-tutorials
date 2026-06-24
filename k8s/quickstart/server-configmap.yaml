@@ -51,11 +51,11 @@ data:
         }
       }
 
-      # cert-manager: SPIRE creates CertificateRequests; issuer signs intermediate via OpenBao (EAB/ACME).
-      # Requires ClusterIssuer (e.g. openbao-acme) and spire-server RBAC on certificaterequests in spire.
+      # cert-manager upstream via ClusterIssuer spire-openbao (localhost bao-agent → JWT → remote OpenBao).
+      # See for_pod_bao_sidecar: sidecars + OpenBao JWT auth; no static OpenBao tokens.
       UpstreamAuthority "cert-manager" {
         plugin_data {
-          issuer_name = "openbao-acme"
+          issuer_name = "spire-openbao"
           issuer_kind = "ClusterIssuer"
           issuer_group = "cert-manager.io"
           namespace = "spire"
