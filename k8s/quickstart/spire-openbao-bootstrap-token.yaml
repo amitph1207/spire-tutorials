@@ -9,7 +9,12 @@
 #   }
 #   EOF
 #
-#   bao token create -policy=spire-openbao-pki -use-limit=1 -ttl=10m -orphan
+#   bao token create -policy=spire-openbao-pki -ttl=10m -orphan
+#
+# Do NOT use -use-limit=1: SPIRE UpstreamAuthority calls lookup-self AND
+# sign-intermediate (2+ OpenBao requests). use-limit=1 dies on the first call.
+# Mike's "single-use bootstrap" = mint once per ceremony, short TTL, delete Secret
+# after JWT steady-state — not Vault num_uses=1.
 #
 # Paste the token value below, then:
 #   kubectl apply -f spire-openbao-bootstrap-token.yaml

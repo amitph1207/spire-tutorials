@@ -55,9 +55,23 @@ spec:
               mountPath: /var/run/secrets/spiffe.io
             - name: spire-spiffe-helper-config
               mountPath: /etc/spiffe-helper
-        - name: wait-for-bao-proxy
-          image: cgr.dev/chainguard/wait-for-it
-          args: ["-t", "120", "127.0.0.1:8200"]
+        - name: wait-for-bao-auth
+          image: quay.io/openbao/openbao:2.1.0
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              echo "waiting for bao-agent proxy auth (lookup-self)..."
+              for i in $(seq 1 90); do
+                if VAULT_TOKEN=unused bao token lookup -address=http://127.0.0.1:8200 2>/dev/null \
+                  | grep -q 'spire-openbao-pki'; then
+                  echo "bao-agent proxy auth ready"
+                  exit 0
+                fi
+                sleep 2
+              done
+              echo "timeout: bao-agent never authenticated (check bootstrap token + bao-agent logs)"
+              exit 1
       containers:
         - name: spire-server
           image: ghcr.io/spiffe/spire-server:1.11.2

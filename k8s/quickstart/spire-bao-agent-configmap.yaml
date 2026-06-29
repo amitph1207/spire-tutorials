@@ -91,6 +91,19 @@ data:
 
     start_agent "${CONFIG_DIR}/agent-bootstrap.hcl" "bootstrap"
 
+    # Block until token_file auth succeeds (sink written) before SPIRE can use proxy.
+    ready=0
+    for i in $(seq 1 60); do
+      if [ -s /tmp/bao-agent-token ]; then
+        ready=1
+        break
+      fi
+      sleep 1
+    done
+    if [ "${ready}" -eq 0 ]; then
+      echo "bao-agent: bootstrap token auth failed — check /etc/openbao/bootstrap/token"
+    fi
+
     while true; do
       if [ "${MODE}" = "bootstrap" ] && [ -f /var/run/secrets/spiffe.io/jwt.token ] && [ -s /var/run/secrets/spiffe.io/jwt.token ]; then
         echo "bao-agent: JWT-SVID available — switching from bootstrap to JWT auth"
