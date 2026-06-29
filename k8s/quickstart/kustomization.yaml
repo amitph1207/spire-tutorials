@@ -7,8 +7,9 @@ resources:
 - spire-namespace.yaml
 - server-account.yaml
 - server-cluster-role.yaml
-- spire-bao-approle-secret.yaml
+- spire-openbao-bootstrap-token.yaml
 - spire-bao-agent-configmap.yaml
+- spire-spiffe-helper-configmap.yaml
 - server-configmap.yaml
 - oidc-dp-configmap.yaml
 - spire-bundle-configmap.yaml

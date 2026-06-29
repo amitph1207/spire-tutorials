@@ -51,7 +51,7 @@ data:
         }
       }
 
-      # localhost bao-agent: AppRole login + auto token renew; agent injects live token per request.
+      # localhost bao-agent: bootstrap single-use token → JWT-SVID steady state; api_proxy injects token.
       # SPIRE requires a non-empty token at init — "unused" is overridden by api_proxy (force).
       UpstreamAuthority "vault" {
         plugin_data {

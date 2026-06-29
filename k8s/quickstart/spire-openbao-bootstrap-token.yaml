@@ -1,0 +1,27 @@
+# Single-use OpenBao token for SPIRE server cold bootstrap only (Mike Beiter model).
+# NOT for steady-state — bao-agent switches to JWT-SVID auth after spire-server entry exists.
+#
+# Mint on OpenBao (once per bootstrap / disaster recovery):
+#
+#   bao policy write spire-openbao-pki - <<'EOF'
+#   path "pki_int/root/sign-intermediate" {
+#     capabilities = ["update"]
+#   }
+#   EOF
+#
+#   bao token create -policy=spire-openbao-pki -use-limit=1 -ttl=10m -orphan
+#
+# Paste the token value below, then:
+#   kubectl apply -f spire-openbao-bootstrap-token.yaml
+#
+# If spire-server starts and the token is already consumed → treat as leak/incident.
+# Delete this Secret after JWT steady-state is confirmed (optional hardening).
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: spire-openbao-bootstrap-token
+  namespace: spire
+type: Opaque
+stringData:
+  token: REPLACE_WITH_SINGLE_USE_TOKEN

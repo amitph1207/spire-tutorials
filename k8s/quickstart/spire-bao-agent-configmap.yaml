@@ -1,29 +1,23 @@
-# bao-agent in spire-server pod:
-#   AppRole (role-id + secret-id) → login → short-lived OpenBao token (auto-renewed ~every 30m)
-#   api_proxy on 127.0.0.1:8200 injects the current token on every request (use_auto_auth_token=force)
-#
-# SPIRE vault plugin cannot read a token file; it sends a placeholder token to localhost and the
-# agent replaces it with the live renewed session token.
+# spire-server bao-agent: bootstrap (single-use token_file) → JWT (steady state).
+# api_proxy on 127.0.0.1:8200; SPIRE UpstreamAuthority uses vault_addr=http://127.0.0.1:8200.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: spire-bao-agent-config
   namespace: spire
 data:
-  agent.hcl: |
+  agent-bootstrap.hcl: |
     exit_after_auth = false
-    pid_file = "/tmp/bao-agent.pid"
+    pid_file = "/tmp/bao-agent-bootstrap.pid"
 
     vault {
       address = "http://openbao.default.svc.cluster.local:8200"
     }
 
     auto_auth {
-      method "approle" {
-        mount_path = "auth/approle"
+      method "token_file" {
         config = {
-          role_id_file_path   = "/etc/bao/approle/role-id"
-          secret_id_file_path = "/etc/bao/approle/secret-id"
+          token_file_path = "/etc/openbao/bootstrap/token"
         }
       }
       sink "file" {
@@ -41,3 +35,73 @@ data:
     api_proxy {
       use_auto_auth_token = "force"
     }
+
+  agent-jwt.hcl: |
+    exit_after_auth = false
+    pid_file = "/tmp/bao-agent-jwt.pid"
+
+    vault {
+      address = "http://openbao.default.svc.cluster.local:8200"
+    }
+
+    auto_auth {
+      method "jwt" {
+        mount_path = "auth/jwt"
+        config = {
+          role = "spire-server-pki"
+          path = "/var/run/secrets/spiffe.io/jwt.token"
+          remove_jwt_after_reading = false
+        }
+      }
+      sink "file" {
+        config = {
+          path = "/tmp/bao-agent-token"
+        }
+      }
+    }
+
+    listener "tcp" {
+      address     = "127.0.0.1:8200"
+      tls_disable = true
+    }
+
+    api_proxy {
+      use_auto_auth_token = "force"
+    }
+
+  agent-entrypoint.sh: |
+    #!/bin/sh
+    set -eu
+    CONFIG_DIR=/etc/bao
+    AGENT_PID=""
+    MODE="bootstrap"
+
+    start_agent() {
+      config=$1
+      mode=$2
+      if [ -n "${AGENT_PID}" ] && kill -0 "${AGENT_PID}" 2>/dev/null; then
+        kill "${AGENT_PID}" 2>/dev/null || true
+        wait "${AGENT_PID}" 2>/dev/null || true
+      fi
+      echo "bao-agent: starting in ${mode} mode"
+      bao agent -config="${config}" &
+      AGENT_PID=$!
+      MODE="${mode}"
+    }
+
+    start_agent "${CONFIG_DIR}/agent-bootstrap.hcl" "bootstrap"
+
+    while true; do
+      if [ "${MODE}" = "bootstrap" ] && [ -f /var/run/secrets/spiffe.io/jwt.token ] && [ -s /var/run/secrets/spiffe.io/jwt.token ]; then
+        echo "bao-agent: JWT-SVID available — switching from bootstrap to JWT auth"
+        start_agent "${CONFIG_DIR}/agent-jwt.hcl" "jwt"
+      fi
+      if [ -n "${AGENT_PID}" ] && ! kill -0 "${AGENT_PID}" 2>/dev/null; then
+        if [ "${MODE}" = "jwt" ]; then
+          start_agent "${CONFIG_DIR}/agent-jwt.hcl" "jwt"
+        else
+          start_agent "${CONFIG_DIR}/agent-bootstrap.hcl" "bootstrap"
+        fi
+      fi
+      sleep 5
+    done

@@ -21,22 +21,43 @@ spec:
       securityContext:
         fsGroup: 1000
       initContainers:
+        # Sidecar: bootstrap single-use token → JWT when spiffe-helper has jwt.token
         - name: bao-agent
           restartPolicy: Always
           image: quay.io/openbao/openbao:2.1.0
-          command: ["bao", "agent", "-config=/etc/bao/agent.hcl"]
+          command: ["/bin/sh", "/etc/bao/agent-entrypoint.sh"]
           securityContext:
             runAsNonRoot: false
             runAsUser: 0
           volumeMounts:
             - name: spire-bao-agent-config
               mountPath: /etc/bao
-            - name: spire-bao-approle
-              mountPath: /etc/bao/approle
+            - name: spire-openbao-bootstrap-token
+              mountPath: /etc/openbao/bootstrap
               readOnly: true
+            - name: spiffe-jwt
+              mountPath: /var/run/secrets/spiffe.io
+            - name: spire-agent-socket
+              mountPath: /run/spire/sockets
+              readOnly: true
+        - name: spiffe-helper
+          restartPolicy: Always
+          image: ghcr.io/spiffe/spiffe-helper:0.8.0
+          args: ["-config", "/etc/spiffe-helper/helper.conf"]
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: spire-agent-socket
+              mountPath: /run/spire/sockets
+              readOnly: true
+            - name: spiffe-jwt
+              mountPath: /var/run/secrets/spiffe.io
+            - name: spire-spiffe-helper-config
+              mountPath: /etc/spiffe-helper
         - name: wait-for-bao-proxy
           image: cgr.dev/chainguard/wait-for-it
-          args: ["-t", "90", "127.0.0.1:8200"]
+          args: ["-t", "120", "127.0.0.1:8200"]
       containers:
         - name: spire-server
           image: ghcr.io/spiffe/spire-server:1.11.2
@@ -105,14 +126,23 @@ spec:
         - name: spire-bao-agent-config
           configMap:
             name: spire-bao-agent-config
-        - name: spire-bao-approle
+            defaultMode: 0755
+        - name: spire-openbao-bootstrap-token
           secret:
-            secretName: spire-bao-approle
+            secretName: spire-openbao-bootstrap-token
             items:
-              - key: role-id
-                path: role-id
-              - key: secret-id
-                path: secret-id
+              - key: token
+                path: token
+        - name: spire-spiffe-helper-config
+          configMap:
+            name: spire-spiffe-helper-config
+        - name: spire-agent-socket
+          hostPath:
+            path: /run/spire/sockets
+            type: Directory
+        - name: spiffe-jwt
+          emptyDir:
+            medium: Memory
         - name: spire-server-socket
           emptyDir: {}
         - name: spire-oidc-config
