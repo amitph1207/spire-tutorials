@@ -1,0 +1,86 @@
+# Helm values for openbao/openbao with a TLS listener.
+#   helm upgrade --install openbao openbao/openbao -n default -f 02-openbao-values-tls.yaml
+#
+# global.tlsDisable=false makes the chart render BAO_ADDR/BAO_API_ADDR as https
+# and switches the probe scheme; the listener itself is configured below.
+global:
+  enabled: true
+  tlsDisable: false
+
+injector:
+  # The agent injector rewrites pod annotations to the https endpoint; it needs
+  # the transport CA to verify OpenBao.
+  enabled: true
+
+server:
+  # `bao` CLI inside the pod (init/unseal/policy work) talks to https://127.0.0.1:8200.
+  extraEnvironmentVars:
+    BAO_CACERT: /openbao/tls/ca.crt
+
+  volumes:
+    - name: openbao-tls
+      secret:
+        secretName: openbao-tls
+        defaultMode: 0400
+  volumeMounts:
+    - name: openbao-tls
+      mountPath: /openbao/tls
+      readOnly: true
+
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+      api_addr     = "https://openbao.default.svc.cluster.local:8200"
+      cluster_addr = "https://openbao-0.openbao-internal.default.svc.cluster.local:8201"
+
+      listener "tcp" {
+        address         = "[::]:8200"
+        cluster_address = "[::]:8201"
+
+        tls_disable      = 0
+        tls_cert_file    = "/openbao/tls/tls.crt"
+        tls_key_file     = "/openbao/tls/tls.key"
+        tls_min_version  = "tls12"
+        tls_cipher_suites = "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+
+        # Optional hardening: require client certs (true mTLS on the listener).
+        # Only turn this on once every client (SPIRE, bao-agent, CLI, injector,
+        # probes) presents a cert from this CA, otherwise the pod goes NotReady.
+        # tls_client_ca_file              = "/openbao/tls/ca.crt"
+        # tls_require_and_verify_client_cert = true
+      }
+
+      storage "file" {
+        path = "/openbao/data"
+      }
+
+      telemetry {
+        prometheus_retention_time = "30s"
+        disable_hostname          = true
+      }
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: openebs-hostpath
+
+  # Restrict who may reach 8200/8201 instead of the chart default "any namespace".
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: spire
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: default
+        ports:
+          - port: 8200
+            protocol: TCP
+          - port: 8201
+            protocol: TCP
+
+ui:
+  enabled: true

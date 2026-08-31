@@ -1,0 +1,81 @@
+# Server TLS material for OpenBao, issued by cert-manager.
+#
+# Chicken-and-egg note: OpenBao is the PKI root for SPIRE, so its own listener
+# cert cannot come from OpenBao's pki_int. A dedicated self-signed CA is used
+# here purely for the transport (listener) identity. It is NOT the SPIRE trust
+# root and must not be reused for workload identity.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: openbao-transport-selfsigned
+spec:
+  selfSigned: {}
+---
+# Long-lived transport CA. Private key stays in the cert-manager namespace.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openbao-transport-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: openbao-transport-ca
+  secretName: openbao-transport-ca
+  duration: 43800h # 5y
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: openbao-transport-selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: openbao-transport-ca-issuer
+spec:
+  ca:
+    secretName: openbao-transport-ca
+---
+# Listener cert for the OpenBao server pods.
+# SANs must cover every name a client may dial, including the headless
+# per-pod names used for cluster (8201) traffic.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openbao-tls
+  namespace: default
+spec:
+  secretName: openbao-tls
+  duration: 2160h # 90d
+  renewBefore: 720h # 30d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  usages:
+    - server auth
+    - client auth
+  commonName: openbao.default.svc.cluster.local
+  dnsNames:
+    - openbao
+    - openbao.default
+    - openbao.default.svc
+    - openbao.default.svc.cluster.local
+    - openbao-active
+    - openbao-active.default.svc.cluster.local
+    - openbao-standby.default.svc.cluster.local
+    - openbao-internal
+    - openbao-internal.default.svc.cluster.local
+    - openbao-0.openbao-internal
+    - openbao-0.openbao-internal.default.svc.cluster.local
+    - localhost
+  ipAddresses:
+    - 127.0.0.1
+  issuerRef:
+    name: openbao-transport-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

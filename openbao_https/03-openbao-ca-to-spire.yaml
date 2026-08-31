@@ -1,0 +1,33 @@
+# Distribute the OpenBao transport CA to the spire namespace so spire-server
+# (and bao-agent) can verify the OpenBao listener without insecure_skip_verify.
+#
+# Preferred: trust-manager keeps the bundle in sync when the CA rotates.
+#   helm repo add jetstack https://charts.jetstack.io
+#   helm upgrade --install trust-manager jetstack/trust-manager -n cert-manager
+#
+# trust-manager only reads sources from its "trust namespace" (cert-manager by
+# default), which is where 01-openbao-tls-certs.yaml puts the CA secret.
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: openbao-transport-ca
+spec:
+  sources:
+    - secret:
+        name: openbao-transport-ca
+        key: ca.crt
+  target:
+    configMap:
+      key: ca.crt
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: spire
+# Result: ConfigMap openbao-transport-ca in namespace spire, key ca.crt.
+#
+# Fallback without trust-manager (static copy, must be redone on CA rotation):
+#
+#   kubectl get secret openbao-tls -n default -o jsonpath='{.data.ca\.crt}' \
+#     | base64 -d > /tmp/openbao-ca.crt
+#   kubectl create configmap openbao-transport-ca -n spire \
+#     --from-file=ca.crt=/tmp/openbao-ca.crt --dry-run=client -o yaml | kubectl apply -f -
