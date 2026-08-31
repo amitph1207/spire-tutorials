@@ -49,9 +49,10 @@ data:
       # Remote OpenBao: set k8s_auth_mount_point = "jwt/k8s"
       UpstreamAuthority "vault" {
         plugin_data {
-          vault_addr = "http://openbao.default.svc.cluster.local:8200"
+          vault_addr = "https://openbao.default.svc.cluster.local:8200"
           pki_mount_point = "pki_int"
-          insecure_skip_verify = true
+          # OpenBao's transport CA, projected from ConfigMap openbao-transport-ca.
+          ca_cert_path = "/run/spire/openbao-ca/ca.crt"
           k8s_auth {
             k8s_auth_mount_point = "kubernetes"
             k8s_auth_role_name = "spire-server"

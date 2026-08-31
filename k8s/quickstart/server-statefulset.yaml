@@ -35,6 +35,9 @@ spec:
             - name: spire-openbao-bootstrap-token
               mountPath: /etc/openbao/bootstrap
               readOnly: true
+            - name: openbao-ca
+              mountPath: /etc/openbao/ca
+              readOnly: true
             - name: spiffe-jwt
               mountPath: /var/run/secrets/spiffe.io
             - name: spire-agent-socket
@@ -147,6 +150,12 @@ spec:
             items:
               - key: token
                 path: token
+        - name: openbao-ca
+          configMap:
+            name: openbao-transport-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
         - name: spire-spiffe-helper-config
           configMap:
             name: spire-spiffe-helper-config

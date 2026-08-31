@@ -44,6 +44,9 @@ spec:
             - name: spire-server-sa-token
               mountPath: /var/run/secrets/tokens
               readOnly: true
+            - name: openbao-ca
+              mountPath: /run/spire/openbao-ca
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /live
@@ -92,6 +95,12 @@ spec:
                   path: spire-server
                   expirationSeconds: 7200
                   audience: https://kubernetes.default.svc.cluster.local
+        - name: openbao-ca
+          configMap:
+            name: openbao-transport-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
         - name: spire-server-socket
           emptyDir: {}
         - name: spire-oidc-config

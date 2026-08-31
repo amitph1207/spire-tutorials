@@ -1,5 +1,7 @@
 # spire-server bao-agent: bootstrap (single-use token_file) → JWT (steady state).
 # api_proxy on 127.0.0.1:8200; SPIRE UpstreamAuthority uses vault_addr=http://127.0.0.1:8200.
+# The 127.0.0.1 hop never leaves the pod network namespace; the hop that crosses
+# the network (agent → OpenBao) is TLS-verified against the transport CA below.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,7 +13,8 @@ data:
     pid_file = "/tmp/bao-agent-bootstrap.pid"
 
     vault {
-      address = "http://openbao.default.svc.cluster.local:8200"
+      address = "https://openbao.default.svc.cluster.local:8200"
+      ca_cert = "/etc/openbao/ca/ca.crt"
     }
 
     auto_auth {
@@ -41,7 +44,8 @@ data:
     pid_file = "/tmp/bao-agent-jwt.pid"
 
     vault {
-      address = "http://openbao.default.svc.cluster.local:8200"
+      address = "https://openbao.default.svc.cluster.local:8200"
+      ca_cert = "/etc/openbao/ca/ca.crt"
     }
 
     auto_auth {
